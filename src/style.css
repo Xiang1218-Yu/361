@@ -3,6 +3,9 @@
   --neon-pink: #ff0044;
   --glass: rgba(0, 0, 0, 0.05);
   --glass-border: rgba(0, 0, 0, 0.1);
+  --skill-dash: #00ffff;
+  --skill-whirlwind: #ff6600;
+  --skill-wave: #aa00ff;
 }
 
 body {
@@ -57,6 +60,52 @@ body {
   box-shadow: inset 0 0 10px #ff007b;
 }
 
+.energy-bar-container {
+  width: 400px;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(10px);
+  transform: skewX(-15deg);
+  margin-top: 4px;
+}
+
+.energy-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.15s cubic-bezier(0.1, 0.7, 1.0, 0.1);
+  border-radius: 2px;
+}
+
+.player-energy {
+  background: linear-gradient(90deg, #ffcc00, #ff8800);
+  box-shadow: inset 0 0 6px rgba(255, 204, 0, 0.5);
+}
+
+.energy-low {
+  background: linear-gradient(90deg, #cc3333, #991111) !important;
+  box-shadow: inset 0 0 6px rgba(204, 51, 51, 0.5) !important;
+}
+
+.energy-mid {
+  background: linear-gradient(90deg, #ffaa00, #cc7700) !important;
+  box-shadow: inset 0 0 6px rgba(255, 170, 0, 0.5) !important;
+}
+
+.energy-high {
+  background: linear-gradient(90deg, #ffcc00, #ff8800) !important;
+  box-shadow: inset 0 0 8px rgba(255, 204, 0, 0.7) !important;
+  animation: energyPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes energyPulse {
+  0%, 100% { box-shadow: inset 0 0 8px rgba(255, 204, 0, 0.7); }
+  50% { box-shadow: inset 0 0 14px rgba(255, 204, 0, 1); }
+}
+
 .character-name {
   font-size: 14px;
   font-weight: bold;
@@ -64,6 +113,102 @@ body {
   margin-bottom: 5px;
   text-shadow: none;
   color: #333;
+}
+
+.skill-bar {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.skill-item {
+  width: 70px;
+  height: 85px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+  transition: all 0.2s;
+}
+
+.skill-item.on-cooldown {
+  opacity: 0.6;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.skill-item.no-energy {
+  opacity: 0.4;
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.skill-item.on-cooldown.no-energy {
+  opacity: 0.3;
+}
+
+.skill-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.skill-icon-dash {
+  background: radial-gradient(circle, var(--skill-dash), #006688);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+.skill-icon-whirlwind {
+  background: radial-gradient(circle, var(--skill-whirlwind), #884400);
+  box-shadow: 0 0 8px rgba(255, 102, 0, 0.5);
+}
+
+.skill-icon-wave {
+  background: radial-gradient(circle, var(--skill-wave), #550088);
+  box-shadow: 0 0 8px rgba(170, 0, 255, 0.5);
+}
+
+.skill-cooldown-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  pointer-events: none;
+  transition: height 0.1s linear;
+}
+
+.skill-key {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+
+.skill-name {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
 }
 
 .menu-overlay {
@@ -117,17 +262,30 @@ body {
 
 .controls-hint {
   position: absolute;
-  bottom: 100px;
+  bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
   font-size: 16px;
   background: rgba(255, 255, 255, 0.1);
-  padding: 10px 30px;
+  padding: 15px 30px;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(5px);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.hint-row {
+  margin: 4px 0;
+}
+
+.hint-row.skill-hint {
+  font-size: 14px;
+  color: #ffcc00;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 #mobile-controls {
@@ -137,14 +295,16 @@ body {
   width: 100%;
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 10px;
   pointer-events: none;
   z-index: 15;
+  flex-wrap: wrap;
+  padding: 0 20px;
 }
 
 .control-btn {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   background: rgba(255, 255, 255, 0.8);
   border: 2px solid var(--neon-blue);
   border-radius: 50%;
@@ -152,6 +312,7 @@ body {
   justify-content: center;
   align-items: center;
   font-weight: 800;
+  font-size: 12px;
   color: var(--neon-blue);
   pointer-events: auto;
   cursor: pointer;
@@ -174,6 +335,18 @@ body {
 .action-btn:active {
   background: var(--neon-pink);
   color: white;
+}
+
+.skill-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #ffcc00;
+  color: #cc8800;
+  font-size: 10px;
+}
+
+.skill-btn:active {
+  background: #ffcc00;
+  color: #fff;
 }
 
 .hidden {
