@@ -1,0 +1,182 @@
+:root {
+  --neon-blue: #0072ff;
+  --neon-pink: #ff0044;
+  --glass: rgba(0, 0, 0, 0.05);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  color: #333;
+  user-select: none;
+}
+
+#ui-layer {
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-container {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.health-bar-container {
+  width: 400px;
+  height: 32px;
+  background: var(--glass);
+  border: 2px solid var(--glass-border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(10px);
+  transform: skewX(-15deg);
+}
+
+.health-bar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.2s cubic-bezier(0.1, 0.7, 1.0, 0.1);
+}
+
+.player-health {
+  background: linear-gradient(90deg, #00f2ff, #222);
+  box-shadow: inset 0 0 10px #00f2ff;
+}
+
+.enemy-health {
+  background: linear-gradient(-90deg, #ff007b, #222);
+  box-shadow: inset 0 0 10px #ff007b;
+}
+
+.character-name {
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  text-shadow: none;
+  color: #333;
+}
+
+.menu-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 20;
+  transition: opacity 0.5s;
+}
+
+.menu-title {
+  font-size: 64px;
+  font-weight: 900;
+  background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 40px;
+  letter-spacing: 10px;
+}
+
+.btn {
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: white;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+  margin: 10px;
+  min-width: 200px;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 30px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#mobile-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.control-btn {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid var(--neon-blue);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  color: var(--neon-blue);
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.control-btn:active {
+  transform: scale(0.85);
+  background: var(--neon-blue);
+  color: white;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--neon-pink);
+  color: var(--neon-pink);
+}
+
+.action-btn:active {
+  background: var(--neon-pink);
+  color: white;
+}
+
+.hidden {
+  display: none !important;
+  opacity: 0;
+}
