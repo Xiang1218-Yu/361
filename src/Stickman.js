@@ -9,10 +9,43 @@ export class Stickman {
         this.group = new THREE.Group();
         this.health = 100;
         this.maxHealth = 100;
+        this.energy = 0;
+        this.maxEnergy = 100;
         this.isAttacking = false;
+        this.isUsingSkill = false;
         this.isDead = false;
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.direction = isPlayer ? 1 : -1;
+
+        this.skillCooldowns = {
+            dashAttack: 0,
+            spinKick: 0,
+            energyWave: 0
+        };
+
+        this.skillConfig = {
+            dashAttack: {
+                name: '冲刺攻击',
+                cost: 20,
+                cooldown: 3000,
+                damage: 25,
+                range: 2.5
+            },
+            spinKick: {
+                name: '旋风腿',
+                cost: 30,
+                cooldown: 5000,
+                damage: 35,
+                range: 1.5
+            },
+            energyWave: {
+                name: '能量波',
+                cost: 50,
+                cooldown: 8000,
+                damage: 45,
+                range: 4
+            }
+        };
 
         this.init();
     }
@@ -81,8 +114,7 @@ export class Stickman {
     update(dt = 0.016) {
         if (this.isDead) return;
 
-        // Physics
-        this.velocity.y -= 0.01; // Gravity
+        this.velocity.y -= 0.01;
         this.group.position.y += this.velocity.y;
 
         if (this.group.position.y <= 0) {
@@ -91,17 +123,17 @@ export class Stickman {
             this.isJumping = false;
         }
 
-        // Simple idle animation if not attacking
-        if (!this.isAttacking) {
+        if (!this.isAttacking && !this.isUsingSkill) {
             const time = Date.now() * 0.005;
             this.leftArm.rotation.z = Math.sin(time) * 0.1;
             this.rightArm.rotation.z = -Math.sin(time) * 0.1;
 
-            // Subtle breathing/floating
             if (!this.isJumping) {
                 this.group.position.y = Math.sin(time * 0.5) * 0.02;
             }
         }
+
+        this.updateSkillCooldowns(dt);
     }
 
     jump() {
@@ -111,8 +143,9 @@ export class Stickman {
     }
 
     attack(type = 'punch') {
-        if (this.isAttacking || this.isDead) return;
+        if (this.isAttacking || this.isUsingSkill || this.isDead) return;
         this.isAttacking = true;
+        this.gainEnergy(5);
 
         const timeline = gsap.timeline({
             onComplete: () => {
@@ -137,7 +170,6 @@ export class Stickman {
             range = 0.9;
         }
 
-        // Calculate attack position based on CURRENT direction
         return {
             type,
             damage,
@@ -167,11 +199,10 @@ export class Stickman {
     takeDamage(amount, attackerPos) {
         if (this.isDead) return;
         this.health -= amount;
+        this.gainEnergy(10);
 
-        // Visual feedback
         this.flashColor(0xff0000);
 
-        // Knockback physics
         const knockback = (this.group.position.x - attackerPos.x) > 0 ? 0.3 : -0.3;
         gsap.to(this.group.position, {
             x: this.group.position.x + knockback,
@@ -184,6 +215,125 @@ export class Stickman {
             this.health = 0;
             this.die();
         }
+    }
+
+    gainEnergy(amount) {
+        this.energy = Math.min(this.energy + amount, this.maxEnergy);
+    }
+
+    canUseSkill(skillType) {
+        const config = this.skillConfig[skillType];
+        if (!config) return false;
+        if (this.energy < config.cost) return false;
+        if (this.skillCooldowns[skillType] > Date.now()) return false;
+        if (this.isDead || this.isAttacking || this.isUsingSkill) return false;
+        return true;
+    }
+
+    useSkill(skillType) {
+        if (!this.canUseSkill(skillType)) return null;
+
+        const config = this.skillConfig[skillType];
+        this.energy -= config.cost;
+        this.skillCooldowns[skillType] = Date.now() + config.cooldown;
+        this.isUsingSkill = true;
+
+        let hitInfo = null;
+
+        switch (skillType) {
+            case 'dashAttack':
+                hitInfo = this.performDashAttack(config);
+                break;
+            case 'spinKick':
+                hitInfo = this.performSpinKick(config);
+                break;
+            case 'energyWave':
+                hitInfo = this.performEnergyWave(config);
+                break;
+        }
+
+        return hitInfo;
+    }
+
+    performDashAttack(config) {
+        const originalPos = this.group.position.clone();
+        const targetPos = originalPos.x + this.direction * config.range;
+
+        const timeline = gsap.timeline({
+            onComplete: () => {
+                this.isUsingSkill = false;
+            }
+        });
+
+        timeline.to(this.rightArm.rotation, { x: -Math.PI / 1.5, duration: 0.05, ease: "power2.out" })
+            .to(this.group.position, { x: targetPos, duration: 0.2, ease: "power2.in" }, "<")
+            .to(this.group.position, { x: originalPos.x + this.direction * 0.5, duration: 0.15, ease: "power2.out" })
+            .to(this.rightArm.rotation, { x: 0, duration: 0.1, ease: "power2.in" });
+
+        return {
+            type: 'dashAttack',
+            damage: config.damage,
+            range: config.range,
+            pos: originalPos.add(new THREE.Vector3(this.direction * config.range, 1.2, 0))
+        };
+    }
+
+    performSpinKick(config) {
+        const timeline = gsap.timeline({
+            onComplete: () => {
+                this.isUsingSkill = false;
+                this.group.rotation.y = this.direction === 1 ? 0 : Math.PI;
+            }
+        });
+
+        timeline.to(this.rightLeg.rotation, { x: -Math.PI / 1.2, z: 0.5, duration: 0.1, ease: "back.out(2)" })
+            .to(this.leftLeg.rotation, { x: -Math.PI / 1.2, z: -0.5, duration: 0.1, ease: "back.out(2)" }, "<")
+            .to(this.group.rotation, { y: this.group.rotation.y + Math.PI * 2, duration: 0.4, ease: "power2.inOut" }, "<")
+            .to(this.rightLeg.rotation, { x: 0, z: 0, duration: 0.2, ease: "power2.in" })
+            .to(this.leftLeg.rotation, { x: 0, z: 0, duration: 0.2, ease: "power2.in" }, "<");
+
+        return {
+            type: 'spinKick',
+            damage: config.damage,
+            range: config.range,
+            pos: this.group.position.clone().add(new THREE.Vector3(0, 1.2, 0))
+        };
+    }
+
+    performEnergyWave(config) {
+        const timeline = gsap.timeline({
+            onComplete: () => {
+                this.isUsingSkill = false;
+            }
+        });
+
+        timeline.to(this.leftArm.rotation, { x: -Math.PI / 2, duration: 0.1 })
+            .to(this.rightArm.rotation, { x: -Math.PI / 2, duration: 0.1 }, "<")
+            .to([this.leftArm.rotation, this.rightArm.rotation], { x: 0, duration: 0.3, ease: "power2.out" }, "+=0.1");
+
+        this.flashColor(0x00ffff);
+
+        return {
+            type: 'energyWave',
+            damage: config.damage,
+            range: config.range,
+            pos: this.group.position.clone().add(new THREE.Vector3(this.direction * config.range / 2, 1.2, 0)),
+            createWaveEffect: true
+        };
+    }
+
+    updateSkillCooldowns(dt) {
+        Object.keys(this.skillCooldowns).forEach(skillType => {
+            if (this.skillCooldowns[skillType] > 0 && this.skillCooldowns[skillType] < Date.now()) {
+                this.skillCooldowns[skillType] = 0;
+            }
+        });
+    }
+
+    getSkillCooldownPercent(skillType) {
+        const config = this.skillConfig[skillType];
+        const remaining = Math.max(0, this.skillCooldowns[skillType] - Date.now());
+        return remaining / config.cooldown;
     }
 
     flashColor(colorHex) {
@@ -222,12 +372,19 @@ export class Stickman {
 
     reset() {
         this.health = 100;
+        this.energy = 0;
         this.isDead = false;
         this.isAttacking = false;
+        this.isUsingSkill = false;
         this.isJumping = false;
         this.velocity.set(0, 0, 0);
 
-        // Kill any local animations on this group/sub-elements
+        this.skillCooldowns = {
+            dashAttack: 0,
+            spinKick: 0,
+            energyWave: 0
+        };
+
         gsap.killTweensOf(this.group.position);
         gsap.killTweensOf(this.group.rotation);
 
@@ -245,7 +402,6 @@ export class Stickman {
             this.direction = -1;
         }
 
-        // Reset material colors just in case
         const targetColor = new THREE.Color(this.color);
         this.group.traverse(child => {
             if (child.isMesh && child.material) {

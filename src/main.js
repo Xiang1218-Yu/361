@@ -82,7 +82,8 @@ class Game {
                 <h1 class="menu-title">3D 火柴人格斗</h1>
                 <button id="start-btn" class="btn">开始游戏</button>
                 <div class="controls-hint">
-                    A / D : 移动 | K / Space : 跳跃 | J : 拳 | I : 踢
+                    A / D : 移动 | K / Space : 跳跃 | J : 拳 | I : 踢<br/>
+                    L : 冲刺攻击 | U : 旋风腿 | O : 能量波
                 </div>
             </div>
             
@@ -91,6 +92,10 @@ class Game {
                     <div class="character-name">玩家 (PLAYER)</div>
                     <div class="health-bar-container">
                         <div id="player-hp" class="health-bar player-health"></div>
+                    </div>
+                    <div class="energy-bar-container">
+                        <div class="energy-bar-label">能量</div>
+                        <div id="player-energy" class="energy-bar"></div>
                     </div>
                 </div>
                 <div class="enemy-hud">
@@ -101,12 +106,51 @@ class Game {
                 </div>
             </div>
 
+            <div id="keyboard-hint" class="keyboard-hint hidden">
+                <div class="hint-item">
+                    <span class="hint-key">L</span>
+                    <span class="hint-text">冲刺攻击</span>
+                </div>
+                <div class="hint-item">
+                    <span class="hint-key">U</span>
+                    <span class="hint-text">旋风腿</span>
+                </div>
+                <div class="hint-item">
+                    <span class="hint-key">O</span>
+                    <span class="hint-text">能量波</span>
+                </div>
+            </div>
+
+            <div id="skills-container" class="skills-container hidden">
+                <div class="skill-slot" id="skill-dash">
+                    <div class="skill-key">L</div>
+                    <div class="skill-name">冲刺</div>
+                    <div class="skill-cost">20</div>
+                    <div class="skill-cooldown" id="skill-dash-cooldown"></div>
+                </div>
+                <div class="skill-slot" id="skill-spin">
+                    <div class="skill-key">U</div>
+                    <div class="skill-name">旋风</div>
+                    <div class="skill-cost">30</div>
+                    <div class="skill-cooldown" id="skill-spin-cooldown"></div>
+                </div>
+                <div class="skill-slot" id="skill-wave">
+                    <div class="skill-key">O</div>
+                    <div class="skill-name">能量波</div>
+                    <div class="skill-cost">50</div>
+                    <div class="skill-cooldown" id="skill-wave-cooldown"></div>
+                </div>
+            </div>
+
             <div id="mobile-controls" class="hidden">
                 <div class="control-btn" id="btn-left">←</div>
                 <div class="control-btn" id="btn-right">→</div>
                 <div class="control-btn action-btn" id="btn-jump">跳 (K)</div>
                 <div class="control-btn action-btn" id="btn-kick">踢 (I)</div>
                 <div class="control-btn action-btn" id="btn-attack">拳 (J)</div>
+                <div class="control-btn action-btn" id="btn-dash">冲 (L)</div>
+                <div class="control-btn action-btn" id="btn-spin">旋 (U)</div>
+                <div class="control-btn action-btn" id="btn-wave">波 (O)</div>
             </div>
 
             <div id="gameover-menu" class="menu-overlay hidden">
@@ -118,7 +162,6 @@ class Game {
     document.getElementById('start-btn').onclick = () => this.startGame();
     document.getElementById('restart-btn').onclick = () => this.startGame();
 
-    // Button events
     const setupMobileBtn = (id, startAction, endAction) => {
       const btn = document.getElementById(id);
       btn.onmousedown = btn.ontouchstart = (e) => { e.preventDefault(); startAction(); };
@@ -136,6 +179,18 @@ class Game {
     });
     setupMobileBtn('btn-attack', () => {
       const hitInfo = this.player.attack('punch');
+      if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+    });
+    setupMobileBtn('btn-dash', () => {
+      const hitInfo = this.player.useSkill('dashAttack');
+      if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+    });
+    setupMobileBtn('btn-spin', () => {
+      const hitInfo = this.player.useSkill('spinKick');
+      if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+    });
+    setupMobileBtn('btn-wave', () => {
+      const hitInfo = this.player.useSkill('energyWave');
       if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
     });
   }
@@ -160,6 +215,18 @@ class Game {
         const hitInfo = this.player.attack('kick');
         if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
       }
+      if (e.code === 'KeyL') {
+        const hitInfo = this.player.useSkill('dashAttack');
+        if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+      }
+      if (e.code === 'KeyU') {
+        const hitInfo = this.player.useSkill('spinKick');
+        if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+      }
+      if (e.code === 'KeyO') {
+        const hitInfo = this.player.useSkill('energyWave');
+        if (hitInfo) this.checkCollision(this.player, this.enemy, hitInfo);
+      }
     });
 
     window.addEventListener('keyup', (e) => {
@@ -173,10 +240,14 @@ class Game {
     this.player.reset();
     this.enemy.reset();
     this.updateHP();
+    this.updateEnergy();
+    this.updateSkillUI();
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('gameover-menu').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     document.getElementById('mobile-controls').classList.remove('hidden');
+    document.getElementById('skills-container').classList.remove('hidden');
+    document.getElementById('keyboard-hint').classList.remove('hidden');
   }
 
   checkCollision(attacker, target, hitInfo) {
@@ -234,6 +305,37 @@ class Game {
     document.getElementById('enemy-hp').style.width = `${this.enemy.health}%`;
   }
 
+  updateEnergy() {
+    const energyPercent = (this.player.energy / this.player.maxEnergy) * 100;
+    document.getElementById('player-energy').style.width = `${energyPercent}%`;
+  }
+
+  updateSkillUI() {
+    this.updateSkillSlot('dashAttack', 'skill-dash', 'skill-dash-cooldown');
+    this.updateSkillSlot('spinKick', 'skill-spin', 'skill-spin-cooldown');
+    this.updateSkillSlot('energyWave', 'skill-wave', 'skill-wave-cooldown');
+  }
+
+  updateSkillSlot(skillType, slotId, cooldownId) {
+    const slotElement = document.getElementById(slotId);
+    const cooldownElement = document.getElementById(cooldownId);
+
+    if (!slotElement || !cooldownElement) return;
+
+    const canUse = this.player.canUseSkill(skillType);
+    const cooldownPercent = this.player.getSkillCooldownPercent(skillType) * 100;
+
+    if (canUse) {
+      slotElement.classList.remove('disabled');
+      slotElement.classList.add('active');
+    } else {
+      slotElement.classList.add('disabled');
+      slotElement.classList.remove('active');
+    }
+
+    cooldownElement.style.height = `${cooldownPercent}%`;
+  }
+
   endGame(result) {
     this.gameState = 'gameover';
     const title = document.getElementById('result-title');
@@ -242,6 +344,8 @@ class Game {
     setTimeout(() => {
       document.getElementById('gameover-menu').classList.remove('hidden');
       document.getElementById('mobile-controls').classList.add('hidden');
+      document.getElementById('skills-container').classList.add('hidden');
+      document.getElementById('keyboard-hint').classList.add('hidden');
     }, 1000);
   }
 
@@ -254,17 +358,19 @@ class Game {
       if (this.moveLeft) this.player.group.position.x -= speed;
       if (this.moveRight) this.player.group.position.x += speed;
 
-      // AI
       const dist = this.enemy.group.position.distanceTo(this.player.group.position);
       if (dist > 0.8) {
         const dir = (this.player.group.position.x - this.enemy.group.position.x) > 0 ? 1 : -1;
         this.enemy.group.position.x += dir * 0.03;
-      } else if (!this.enemy.isAttacking) {
+      } else if (!this.enemy.isAttacking && !this.enemy.isUsingSkill) {
         if (Math.random() < 0.05) {
           const hitInfo = this.enemy.attack(Math.random() > 0.5 ? 'punch' : 'kick');
           if (hitInfo) this.checkCollision(this.enemy, this.player, hitInfo);
         }
       }
+
+      this.updateEnergy();
+      this.updateSkillUI();
     }
 
     this.player.updateFacing(this.enemy.group.position);
